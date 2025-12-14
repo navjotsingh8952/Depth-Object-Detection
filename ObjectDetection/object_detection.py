@@ -1,6 +1,3 @@
-from collections import defaultdict
-from time import time
-
 import cv2
 
 with open("./res/coco.names", "rt") as f:
@@ -32,10 +29,7 @@ def detect_object(img):
     return objects_detected
 
 
-def detect_animal(sample_time=15):
-    animals = ["cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"]
-    detected_animals = defaultdict(int)
-    s_time = time()
+def detect():
     while True:
         success, img = cap.read()
         if success:
@@ -50,18 +44,9 @@ def detect_animal(sample_time=15):
                 cv2.putText(img, str(round(confidence * 100, 2)), (bounding_box[0] + 200, bounding_box[1] + 30),
                             cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
                 print(object)
-                if object in animals:
-                    detected_animals[object] += 1
-        if time() - s_time > sample_time:
-            break
         cv2.imshow("Output", img)
         cv2.waitKey(1)
 
-    if len(detected_animals) == 0:
-        return False
-    print(detected_animals)
-    return True
-
 
 if __name__ == '__main__':
-    detect_animal()
+    detect()
