@@ -30,8 +30,6 @@ if depth_cam.start(ac.FrameType.DEPTH) != 0:
     depth_cam.close()
     exit(1)
 
-depth_cam.setControl(ac.Control.WIDTH, 320)
-depth_cam.setControl(ac.Control.HEIGHT, 240)
 depth_cam.setControl(ac.Control.RANGE, MAX_DISTANCE)
 print("✅ Cameras initialized")
 
