@@ -90,7 +90,7 @@ def main():
         print("Failed to open camera. Error code:", ret)
         return
 
-    ret = cam.start(ac.FrameType.DEPTH)
+    ret = cam.start(ac.FrameType.RGBD)
     if ret != 0:
         print("Failed to start camera. Error code:", ret)
         cam.close()
