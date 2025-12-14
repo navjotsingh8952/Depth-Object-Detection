@@ -4,10 +4,10 @@ import numpy as np
 from ultralytics import YOLO
 
 # ---------------- CONFIG ----------------
-MAX_DISTANCE = 1200              # keep LOW for clarity
-CONFIDENCE_THRESHOLD = 80        # very strict
+MAX_DISTANCE = 1200  # keep LOW for clarity
+CONFIDENCE_THRESHOLD = 80  # very strict
 YOLO_CONF = 0.5
-ALPHA = 0.8                      # strong temporal smoothing
+ALPHA = 0.8  # strong temporal smoothing
 # ----------------------------------------
 
 # ✅ VALID YOLO MODEL
@@ -37,40 +37,36 @@ def main():
     depth_range = cam.getControl(ac.Control.RANGE)
 
     cv2.namedWindow("preview", cv2.WINDOW_AUTOSIZE)
-
     while True:
         frame = cam.requestFrame(2000)
         if frame is None or not isinstance(frame, ac.DepthData):
             continue
 
-        depth = frame.depth_data.copy()
+        depth = frame.depth_data.copy()  # uint16
         conf = frame.confidence_data
 
-        # ---------- HARD FILTERING ----------
+        # ---------- HARD FILTERING (UINT16 SAFE) ----------
         depth[(conf < CONFIDENCE_THRESHOLD) |
               (depth <= 0) |
               (depth > MAX_DISTANCE)] = 0
 
-        # Median filter
-        depth = cv2.medianBlur(depth, 7)
-
-        # ---------- TEMPORAL FILTER ----------
+        # ---------- TEMPORAL FILTER (UINT16 SAFE) ----------
         if prev_depth is None:
             prev_depth = depth
         else:
             depth = cv2.addWeighted(depth, ALPHA, prev_depth, 1 - ALPHA, 0)
             prev_depth = depth
 
-        # ---------- VISUALIZATION ----------
+        # ---------- CONVERT TO UINT8 FOR DISPLAY ----------
         depth_norm = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
         depth_norm = depth_norm.astype(np.uint8)
 
-        # ✅ Median blur on uint8 (SAFE)
+        # ✅ Median blur ONLY on uint8
         depth_norm = cv2.medianBlur(depth_norm, 5)
 
         depth_vis = cv2.applyColorMap(depth_norm, cv2.COLORMAP_TURBO)
 
-        # ---------- YOLO (OPTIONAL, DEBUG ONLY) ----------
+        # ---------- YOLO (OPTIONAL / DEBUG) ----------
         results = model(depth_vis, conf=YOLO_CONF, verbose=False)
 
         for r in results:
