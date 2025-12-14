@@ -6,7 +6,7 @@ import cv2
 with open("./res/coco.names", "rt") as f:
     classNames = f.read().rstrip('\n').split('\n')
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("http://10.113.219.223:8080/video")
 cap.set(3, 1280)
 cap.set(4, 720)
 cap.set(10, 70)
