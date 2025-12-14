@@ -11,7 +11,7 @@ IP_CAM_URL = "http://10.113.219.223:8080/video"  # Replace with your IP webcam U
 # ----------------------------------------
 
 # Load YOLO
-model = YOLO("yolov11n.pt")
+model = YOLO("yolov11n.pt", device='cpu')
 
 # ---------- INIT CAMERAS ----------
 rgb_cam = cv2.VideoCapture(IP_CAM_URL)
@@ -20,6 +20,8 @@ if not rgb_cam.isOpened():
     exit(1)
 
 depth_cam = ac.ArducamCamera()
+
+
 if depth_cam.open(ac.Connection.CSI, 0) != 0:
     print("❌ Failed to open depth camera")
     exit(1)
@@ -28,6 +30,8 @@ if depth_cam.start(ac.FrameType.DEPTH) != 0:
     depth_cam.close()
     exit(1)
 
+depth_cam.setControl(ac.Control.WIDTH, 320)
+depth_cam.setControl(ac.Control.HEIGHT, 240)
 depth_cam.setControl(ac.Control.RANGE, MAX_DISTANCE)
 print("✅ Cameras initialized")
 
@@ -48,6 +52,7 @@ while True:
     depth[(conf < CONFIDENCE_THRESHOLD) | (depth <= 0) | (depth > MAX_DISTANCE)] = 0
 
     # YOLO on RGB
+    rgb_small = cv2.resize(rgb_frame, (320, 320))
     results = model(rgb_frame, conf=YOLO_CONF, verbose=False)
     for r in results:
         for box in r.boxes:
