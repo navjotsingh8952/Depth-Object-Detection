@@ -65,6 +65,9 @@ def main():
         depth_norm = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
         depth_norm = depth_norm.astype(np.uint8)
 
+        # ✅ Median blur on uint8 (SAFE)
+        depth_norm = cv2.medianBlur(depth_norm, 5)
+
         depth_vis = cv2.applyColorMap(depth_norm, cv2.COLORMAP_TURBO)
 
         # ---------- YOLO (OPTIONAL, DEBUG ONLY) ----------
