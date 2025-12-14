@@ -20,7 +20,7 @@ if not rgb_cam.isOpened():
     exit(1)
 
 depth_cam = ac.ArducamCamera()
-if depth_cam.open(ac.Connection.USB, 0) != 0:
+if depth_cam.open(ac.Connection.CSI, 0) != 0:
     print("❌ Failed to open depth camera")
     exit(1)
 if depth_cam.start(ac.FrameType.DEPTH) != 0:
