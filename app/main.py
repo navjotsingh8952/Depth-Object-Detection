@@ -4,13 +4,13 @@ import numpy as np
 from ultralytics import YOLO
 
 # ---------------- CONFIG ----------------
-MAX_DISTANCE = 1500  # VERY IMPORTANT
-CONFIDENCE_THRESHOLD = 60  # stricter confidence
+MAX_DISTANCE = 1200              # keep LOW for clarity
+CONFIDENCE_THRESHOLD = 80        # very strict
 YOLO_CONF = 0.5
-ALPHA = 0.7  # temporal smoothing
+ALPHA = 0.8                      # strong temporal smoothing
 # ----------------------------------------
 
-# ✅ Correct YOLO model
+# ✅ VALID YOLO MODEL
 model = YOLO("yolov11n.pt")
 
 prev_depth = None
@@ -40,38 +40,34 @@ def main():
 
     while True:
         frame = cam.requestFrame(2000)
-
         if frame is None or not isinstance(frame, ac.DepthData):
             continue
 
-        depth_buf = frame.depth_data.copy()
-        confidence_buf = frame.confidence_data
+        depth = frame.depth_data.copy()
+        conf = frame.confidence_data
 
-        # -------- DEPTH CLEANING --------
-        depth_buf[(depth_buf <= 0) | (depth_buf > MAX_DISTANCE)] = 0
-        depth_buf = cv2.medianBlur(depth_buf, 5)
+        # ---------- HARD FILTERING ----------
+        depth[(conf < CONFIDENCE_THRESHOLD) |
+              (depth <= 0) |
+              (depth > MAX_DISTANCE)] = 0
 
-        # -------- TEMPORAL FILTER (CRITICAL) --------
+        # Median filter
+        depth = cv2.medianBlur(depth, 7)
+
+        # ---------- TEMPORAL FILTER ----------
         if prev_depth is None:
-            prev_depth = depth_buf
+            prev_depth = depth
         else:
-            depth_buf = cv2.addWeighted(
-                depth_buf, ALPHA, prev_depth, 1 - ALPHA, 0
-            )
-            prev_depth = depth_buf
+            depth = cv2.addWeighted(depth, ALPHA, prev_depth, 1 - ALPHA, 0)
+            prev_depth = depth
 
-        # -------- VISUALIZATION IMAGE --------
-        depth_vis = (depth_buf * (255.0 / depth_range)).astype(np.uint8)
-        depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_TURBO)
+        # ---------- VISUALIZATION ----------
+        depth_norm = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
+        depth_norm = depth_norm.astype(np.uint8)
 
-        # -------- CONFIDENCE MASK + MORPHOLOGY --------
-        mask = (confidence_buf >= CONFIDENCE_THRESHOLD).astype(np.uint8) * 255
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        depth_vis = cv2.applyColorMap(depth_norm, cv2.COLORMAP_TURBO)
 
-        depth_vis[mask == 0] = (0, 0, 0)
-
-        # -------- YOLO DETECTION (NO BLUR HERE) --------
+        # ---------- YOLO (OPTIONAL, DEBUG ONLY) ----------
         results = model(depth_vis, conf=YOLO_CONF, verbose=False)
 
         for r in results:
@@ -80,35 +76,26 @@ def main():
                 cls_id = int(box.cls[0])
                 label = model.names[cls_id]
 
-                x1 = max(0, x1)
-                y1 = max(0, y1)
-                x2 = min(depth_buf.shape[1], x2)
-                y2 = min(depth_buf.shape[0], y2)
-
-                roi = depth_buf[y1:y2, x1:x2]
+                roi = depth[y1:y2, x1:x2]
                 if roi.size == 0:
                     continue
 
-                # ✅ Stable distance
-                distance = np.percentile(roi, 30)
+                distance = np.percentile(roi, 25)
 
                 cv2.rectangle(depth_vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
                 cv2.putText(
                     depth_vis,
                     f"{label} {int(distance)}mm",
-                    (x1, y1 - 10),
+                    (x1, y1 - 8),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (255, 255, 255),
                     2
                 )
 
-        # -------- DISPLAY (LIGHT BLUR OK) --------
-        display = cv2.GaussianBlur(depth_vis, (3, 3), 0)
-        cv2.imshow("preview", display)
+        cv2.imshow("preview", depth_vis)
 
         cam.releaseFrame(frame)
-
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
