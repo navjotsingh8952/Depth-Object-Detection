@@ -48,13 +48,21 @@ def main():
         frame = cam.requestFrame(2000)
 
         if frame is not None and isinstance(frame, ac.DepthData):
-            depth_buf = frame.depth_data
+            depth_buf = frame.depth_data.copy()
             confidence_buf = frame.confidence_data
 
-            # Depth → colormap
+            # ---- CLEAN DEPTH ----
+            depth_buf[(depth_buf <= 0) | (depth_buf > MAX_DISTANCE)] = 0
+            depth_buf = cv2.medianBlur(depth_buf, 5)
+
+            # ---- DEPTH VIS ----
             depth_vis = (depth_buf * (255.0 / depth_range)).astype(np.uint8)
-            depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_RAINBOW)
-            depth_vis = getPreviewRGB(depth_vis, confidence_buf)
+            depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_TURBO)
+
+            mask = confidence_buf >= CONFIDENCE_THRESHOLD
+            depth_vis[~mask] = (0, 0, 0)
+
+            depth_vis = cv2.GaussianBlur(depth_vis, (5, 5), 0)
 
             # ---------------- YOLO DETECTION ----------------
             results = model(depth_vis, conf=YOLO_CONF, verbose=False)
