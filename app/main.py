@@ -1,105 +1,113 @@
+import ArducamDepthCamera as ac
 import cv2
 import numpy as np
-import ArducamDepthCamera as ac
 from ultralytics import YOLO
 
 # ---------------- CONFIG ----------------
-MAX_DISTANCE = 4000
-CONFIDENCE_THRESHOLD = 30
+MAX_DISTANCE = 1500  # VERY IMPORTANT
+CONFIDENCE_THRESHOLD = 60  # stricter confidence
 YOLO_CONF = 0.5
+ALPHA = 0.7  # temporal smoothing
 # ----------------------------------------
 
-# Load YOLO model
-model = YOLO("yolov11n.pt")  # lightweight, good for Raspberry Pi
+# ✅ Correct YOLO model
+model = YOLO("yolov11n.pt")
 
-
-def getPreviewRGB(preview: np.ndarray, confidence: np.ndarray) -> np.ndarray:
-    preview = np.nan_to_num(preview)
-    preview[confidence < CONFIDENCE_THRESHOLD] = (0, 0, 0)
-    return preview
+prev_depth = None
 
 
 def main():
+    global prev_depth
+
     print("Arducam Depth + Object Detection Demo")
     print("SDK version:", ac.__version__)
 
     cam = ac.ArducamCamera()
 
-    ret = cam.open(ac.Connection.CSI, 0)
-    if ret != 0:
-        print("Failed to open camera. Error code:", ret)
+    if cam.open(ac.Connection.CSI, 0) != 0:
+        print("Failed to open camera")
         return
 
-    ret = cam.start(ac.FrameType.DEPTH)
-    if ret != 0:
-        print("Failed to start camera. Error code:", ret)
+    if cam.start(ac.FrameType.DEPTH) != 0:
+        print("Failed to start camera")
         cam.close()
         return
 
     cam.setControl(ac.Control.RANGE, MAX_DISTANCE)
     depth_range = cam.getControl(ac.Control.RANGE)
 
-    info = cam.getCameraInfo()
-    print(f"Resolution: {info.width}x{info.height}")
-
     cv2.namedWindow("preview", cv2.WINDOW_AUTOSIZE)
 
     while True:
         frame = cam.requestFrame(2000)
 
-        if frame is not None and isinstance(frame, ac.DepthData):
-            depth_buf = frame.depth_data.copy()
-            confidence_buf = frame.confidence_data
+        if frame is None or not isinstance(frame, ac.DepthData):
+            continue
 
-            # ---- CLEAN DEPTH ----
-            depth_buf[(depth_buf <= 0) | (depth_buf > MAX_DISTANCE)] = 0
-            depth_buf = cv2.medianBlur(depth_buf, 5)
+        depth_buf = frame.depth_data.copy()
+        confidence_buf = frame.confidence_data
 
-            # ---- DEPTH VIS ----
-            depth_vis = (depth_buf * (255.0 / depth_range)).astype(np.uint8)
-            depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_TURBO)
+        # -------- DEPTH CLEANING --------
+        depth_buf[(depth_buf <= 0) | (depth_buf > MAX_DISTANCE)] = 0
+        depth_buf = cv2.medianBlur(depth_buf, 5)
 
-            mask = confidence_buf >= CONFIDENCE_THRESHOLD
-            depth_vis[~mask] = (0, 0, 0)
+        # -------- TEMPORAL FILTER (CRITICAL) --------
+        if prev_depth is None:
+            prev_depth = depth_buf
+        else:
+            depth_buf = cv2.addWeighted(
+                depth_buf, ALPHA, prev_depth, 1 - ALPHA, 0
+            )
+            prev_depth = depth_buf
 
-            depth_vis = cv2.GaussianBlur(depth_vis, (5, 5), 0)
+        # -------- VISUALIZATION IMAGE --------
+        depth_vis = (depth_buf * (255.0 / depth_range)).astype(np.uint8)
+        depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_TURBO)
 
-            # ---------------- YOLO DETECTION ----------------
-            results = model(depth_vis, conf=YOLO_CONF, verbose=False)
+        # -------- CONFIDENCE MASK + MORPHOLOGY --------
+        mask = (confidence_buf >= CONFIDENCE_THRESHOLD).astype(np.uint8) * 255
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
-            for r in results:
-                for box in r.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    label = model.names[cls_id]
+        depth_vis[mask == 0] = (0, 0, 0)
 
-                    # Clamp box
-                    x1 = max(0, x1)
-                    y1 = max(0, y1)
-                    x2 = min(depth_buf.shape[1], x2)
-                    y2 = min(depth_buf.shape[0], y2)
+        # -------- YOLO DETECTION (NO BLUR HERE) --------
+        results = model(depth_vis, conf=YOLO_CONF, verbose=False)
 
-                    roi = depth_buf[y1:y2, x1:x2]
-                    if roi.size == 0:
-                        continue
+        for r in results:
+            for box in r.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls_id = int(box.cls[0])
+                label = model.names[cls_id]
 
-                    distance = np.mean(roi)
+                x1 = max(0, x1)
+                y1 = max(0, y1)
+                x2 = min(depth_buf.shape[1], x2)
+                y2 = min(depth_buf.shape[0], y2)
 
-                    # Draw bounding box
-                    cv2.rectangle(depth_vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
-                    cv2.putText(
-                        depth_vis,
-                        f"{label} {int(distance)}mm",
-                        (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        (255, 255, 255),
-                        2
-                    )
-            # ------------------------------------------------
+                roi = depth_buf[y1:y2, x1:x2]
+                if roi.size == 0:
+                    continue
 
-            cv2.imshow("preview", depth_vis)
-            cam.releaseFrame(frame)
+                # ✅ Stable distance
+                distance = np.percentile(roi, 30)
+
+                cv2.rectangle(depth_vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
+                cv2.putText(
+                    depth_vis,
+                    f"{label} {int(distance)}mm",
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    2
+                )
+
+        # -------- DISPLAY (LIGHT BLUR OK) --------
+        display = cv2.GaussianBlur(depth_vis, (3, 3), 0)
+        cv2.imshow("preview", display)
+
+        cam.releaseFrame(frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
