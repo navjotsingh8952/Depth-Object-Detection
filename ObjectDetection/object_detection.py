@@ -32,18 +32,20 @@ def detect_object(img):
 def detect():
     while True:
         success, img = cap.read()
-        if success:
-            detected_objects = detect_object(img)
-            if detected_objects is None:
-                continue
+        if not success:
+            continue
 
-            for object, bounding_box, confidence in detected_objects:
-                cv2.rectangle(img, bounding_box, color=(0, 255, 0), thickness=2)
-                cv2.putText(img, object.upper(), (bounding_box[0] + 10, bounding_box[1] + 30),
-                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-                cv2.putText(img, str(round(confidence * 100, 2)), (bounding_box[0] + 200, bounding_box[1] + 30),
-                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-                print(object)
+        detected_objects = detect_object(img)
+        if detected_objects is None:
+            continue
+
+        for object, bounding_box, confidence in detected_objects:
+            cv2.rectangle(img, bounding_box, color=(0, 255, 0), thickness=2)
+            cv2.putText(img, object.upper(), (bounding_box[0] + 10, bounding_box[1] + 30),
+                        cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(img, str(round(confidence * 100, 2)), (bounding_box[0] + 200, bounding_box[1] + 30),
+                        cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            print(object)
         cv2.imshow("Output", img)
         cv2.waitKey(1)
 
