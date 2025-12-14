@@ -11,7 +11,7 @@ IP_CAM_URL = "http://10.113.219.223:8080/video"  # Replace with your IP webcam U
 # ----------------------------------------
 
 # Load YOLO
-model = YOLO("yolov11n.pt", device='cpu')
+model = YOLO("yolov11n.pt")
 
 # ---------- INIT CAMERAS ----------
 rgb_cam = cv2.VideoCapture(IP_CAM_URL)
