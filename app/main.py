@@ -10,7 +10,7 @@ YOLO_CONF = 0.5
 # ----------------------------------------
 
 # Load YOLO model
-model = YOLO("yolov8n.pt")  # lightweight, good for Raspberry Pi
+model = YOLO("yolov11n.pt")  # lightweight, good for Raspberry Pi
 
 
 def getPreviewRGB(preview: np.ndarray, confidence: np.ndarray) -> np.ndarray:
