@@ -7,7 +7,7 @@ from ultralytics import YOLO
 MAX_DISTANCE = 1500
 CONFIDENCE_THRESHOLD = 60
 YOLO_CONF = 0.5
-IP_CAM_URL = "http://192.168.1.100:8080/video"  # Replace with your IP webcam URL
+IP_CAM_URL = "http://10.113.219.223:8080/video"  # Replace with your IP webcam URL
 # ----------------------------------------
 
 # Load YOLO
