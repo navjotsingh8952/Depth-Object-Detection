@@ -3,7 +3,7 @@ import numpy as np
 import ArducamDepthCamera as ac
 
 # ---------------- CONFIG ----------------
-IP_CAM_URL = "0"
+IP_CAM_URL = 0
 MAX_DISTANCE = 4000
 CONFIDENCE_VALUE = 30
 SSD_CONF = 0.45
