@@ -1,6 +1,5 @@
-import cv2
-import numpy as np
 import ArducamDepthCamera as ac
+import cv2
 
 # ---------------- CONFIG ----------------
 IP_CAM_URL = 0
@@ -24,85 +23,90 @@ net.setInputSize(320, 320)
 net.setInputScale(1.0 / 127.5)
 net.setInputMean((127.5, 127.5, 127.5))
 net.setInputSwapRB(True)
+cap = depth_cam = None
+try:
+    # ---------- IP Webcam ----------
+    cap = cv2.VideoCapture(IP_CAM_URL)
 
-# ---------- IP Webcam ----------
-cap = cv2.VideoCapture(IP_CAM_URL)
+    # ---------- Depth Camera ----------
+    depth_cam = ac.ArducamCamera()
 
-# ---------- Depth Camera ----------
-depth_cam = ac.ArducamCamera()
+    if depth_cam.open(ac.Connection.CSI, 0) != 0:
+        print("❌ Failed to open depth camera")
+        exit()
 
-if depth_cam.open(ac.Connection.CSI, 0) != 0:
-    print("❌ Failed to open depth camera")
-    exit()
+    if depth_cam.start(ac.FrameType.DEPTH) != 0:
+        print("❌ Failed to start depth camera")
+        depth_cam.close()
+        exit()
 
-if depth_cam.start(ac.FrameType.DEPTH) != 0:
-    print("❌ Failed to start depth camera")
-    depth_cam.close()
-    exit()
+    depth_cam.setControl(ac.Control.RANGE, MAX_DISTANCE)
+    depth_range = depth_cam.getControl(ac.Control.RANGE)
 
-depth_cam.setControl(ac.Control.RANGE, MAX_DISTANCE)
-depth_range = depth_cam.getControl(ac.Control.RANGE)
+    print("✅ Cameras initialized")
 
-print("✅ Cameras initialized")
+    # ---------- MAIN LOOP ----------
+    while True:
+        ret, rgb = cap.read()
+        if not ret:
+            continue
 
-# ---------- MAIN LOOP ----------
-while True:
-    ret, rgb = cap.read()
-    if not ret:
-        continue
+        frame = depth_cam.requestFrame(2000)
+        if frame is None or not isinstance(frame, ac.DepthData):
+            continue
 
-    frame = depth_cam.requestFrame(2000)
-    if frame is None or not isinstance(frame, ac.DepthData):
-        continue
+        depth = frame.depth_data.copy()
+        confidence = frame.confidence_data
 
-    depth = frame.depth_data.copy()
-    confidence = frame.confidence_data
+        # Clean depth
+        depth[(confidence < CONFIDENCE_VALUE) | (depth <= 0) | (depth > MAX_DISTANCE)] = 0
 
-    # Clean depth
-    depth[(confidence < CONFIDENCE_VALUE) | (depth <= 0) | (depth > MAX_DISTANCE)] = 0
+        # Resize depth to match RGB
+        depth_resized = cv2.resize(depth, (rgb.shape[1], rgb.shape[0]))
 
-    # Resize depth to match RGB
-    depth_resized = cv2.resize(depth, (rgb.shape[1], rgb.shape[0]))
+        # ---------- Object Detection ----------
+        classIds, confs, boxes = net.detect(rgb, confThreshold=SSD_CONF)
 
-    # ---------- Object Detection ----------
-    classIds, confs, boxes = net.detect(rgb, confThreshold=SSD_CONF)
+        if len(classIds) != 0:
+            for classId, conf, box in zip(classIds.flatten(), confs.flatten(), boxes):
 
-    if len(classIds) != 0:
-        for classId, conf, box in zip(classIds.flatten(), confs.flatten(), boxes):
+                x, y, w, h = box
+                cx = x + w // 2
+                cy = y + h // 2
 
-            x, y, w, h = box
-            cx = x + w // 2
-            cy = y + h // 2
+                # Safe depth lookup
+                if cy >= depth_resized.shape[0] or cx >= depth_resized.shape[1]:
+                    continue
 
-            # Safe depth lookup
-            if cy >= depth_resized.shape[0] or cx >= depth_resized.shape[1]:
-                continue
+                distance = depth_resized[cy, cx]
+                label = classNames[classId - 1]
 
-            distance = depth_resized[cy, cx]
-            label = classNames[classId - 1]
+                cv2.rectangle(rgb, box, (0, 255, 0), 2)
+                cv2.circle(rgb, (cx, cy), 4, (0, 0, 255), -1)
 
-            cv2.rectangle(rgb, box, (0, 255, 0), 2)
-            cv2.circle(rgb, (cx, cy), 4, (0, 0, 255), -1)
+                cv2.putText(
+                    rgb,
+                    f"{label} {int(distance)}mm",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                )
 
-            cv2.putText(
-                rgb,
-                f"{label} {int(distance)}mm",
-                (x, y - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 255, 0),
-                2,
-            )
+        cv2.imshow("IP Cam + Depth Object Detection", rgb)
 
-    cv2.imshow("IP Cam + Depth Object Detection", rgb)
+        depth_cam.releaseFrame(frame)
 
-    depth_cam.releaseFrame(frame)
-
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-# ---------- CLEANUP ----------
-cap.release()
-depth_cam.stop()
-depth_cam.close()
-cv2.destroyAllWindows()
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+except Exception as e:
+    print(e)
+finally:
+    # ---------- CLEANUP ----------
+    if cap is not None:
+        cap.release()
+    if depth_cam is not None:
+        depth_cam.stop()
+        depth_cam.close()
+    cv2.destroyAllWindows()
