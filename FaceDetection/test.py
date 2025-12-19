@@ -1,30 +1,55 @@
 import face_recognition
 import pickle
-import cv2
+import os
 
-# Load encodings
+DATASET_DIR = "dataset"
+TOLERANCE = 0.6   # lower = stricter
+
+# Load trained data
 with open("trained_faces.pkl", "rb") as f:
     data = pickle.load(f)
 
-# Load new image
-image = face_recognition.load_image_file("unknown.jpg")
-face_locations = face_recognition.face_locations(image)
-face_encodings = face_recognition.face_encodings(image, face_locations)
+total = 0
+correct = 0
 
-image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+for person_name in os.listdir(DATASET_DIR):
+    person_dir = os.path.join(DATASET_DIR, person_name)
+    if not os.path.isdir(person_dir):
+        continue
 
-for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-    matches = face_recognition.compare_faces(data["encodings"], face_encoding)
-    name = "Unknown"
+    for img_name in os.listdir(person_dir):
+        img_path = os.path.join(person_dir, img_name)
 
-    if True in matches:
-        matched_idxs = [i for i, m in enumerate(matches) if m]
-        name = data["names"][matched_idxs[0]]
+        image = face_recognition.load_image_file(img_path)
+        encodings = face_recognition.face_encodings(image)
 
-    cv2.rectangle(image_bgr, (left, top), (right, bottom), (0, 255, 0), 2)
-    cv2.putText(image_bgr, name, (left, top - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        if len(encodings) == 0:
+            print(f"❌ No face found: {img_path}")
+            continue
 
-cv2.imshow("Result", image_bgr)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+        face_encoding = encodings[0]
+
+        matches = face_recognition.compare_faces(
+            data["encodings"], face_encoding, tolerance=TOLERANCE
+        )
+
+        name = "Unknown"
+        if True in matches:
+            name = data["names"][matches.index(True)]
+
+        total += 1
+        if name == person_name:
+            correct += 1
+            result = "✅"
+        else:
+            result = "❌"
+
+        print(f"{result} Image: {img_name} | Actual: {person_name} | Predicted: {name}")
+
+# Accuracy
+accuracy = (correct / total) * 100 if total > 0 else 0
+print("\n==============================")
+print(f"Total Images   : {total}")
+print(f"Correct        : {correct}")
+print(f"Accuracy       : {accuracy:.2f}%")
+print("==============================")
