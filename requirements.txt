@@ -1,0 +1,5 @@
+ArducamDepthCamera
+opencv-python
+ultralytics
+pyttsx3
+face_recognition

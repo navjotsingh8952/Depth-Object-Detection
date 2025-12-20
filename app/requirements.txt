@@ -1,3 +1,0 @@
-ArducamDepthCamera
-opencv-python
-ultralytics
