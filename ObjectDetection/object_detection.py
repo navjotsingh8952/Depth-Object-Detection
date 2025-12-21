@@ -50,7 +50,7 @@ def detect():
             print(object)
         cv2.imshow("Output", img)
         cv2.waitKey(3)
-        time.sleep(20)
+        time.sleep(5)
 
 
 if __name__ == '__main__':
