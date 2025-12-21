@@ -42,7 +42,7 @@ try:
                 speak(f"Detected: {','.join(objects)}")
                 print(f"Detected: {','.join(objects)}")
 
-            cv2.imshow("Webcam Object Recognition", frame)
+            cv2.imshow("Webcam", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         # ---------- FACE MODE ----------
@@ -56,7 +56,7 @@ try:
 
                 old_name = name
 
-            cv2.imshow("Webcam Face Recognition", frame)
+            cv2.imshow("Webcam", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         time.sleep(0.3)
