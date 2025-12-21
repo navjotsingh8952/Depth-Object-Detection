@@ -1,3 +1,5 @@
+import time
+
 import cv2
 
 with open("./res/coco.names", "rt") as f:
@@ -48,6 +50,7 @@ def detect():
             print(object)
         cv2.imshow("Output", img)
         cv2.waitKey(3)
+        time.sleep(5)
 
 
 if __name__ == '__main__':
