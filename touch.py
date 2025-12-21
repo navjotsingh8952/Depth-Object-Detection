@@ -3,7 +3,7 @@ import time
 
 from gpiozero import Button
 
-touch = Button(17)  # BCM pin
+touch = Button(27)  # BCM pin
 
 
 def is_touched():
