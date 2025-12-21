@@ -47,7 +47,7 @@ def detect():
                         cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
             print(object)
         cv2.imshow("Output", img)
-        cv2.waitKey(1)
+        cv2.waitKey(3)
 
 
 if __name__ == '__main__':
