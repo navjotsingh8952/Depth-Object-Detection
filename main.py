@@ -5,11 +5,11 @@ import cv2
 
 from face_recognition_module import detect_face
 from object_detection_module import detect_object
-from touch import is_touched
 from tts import speak
 from ultrasonic import Ultrasonic
 
 GPIO.setmode(GPIO.BCM)
+from touch import is_touched
 
 # ---------- SENSORS ----------
 ultra_left = Ultrasonic(trig=23, echo=24)
