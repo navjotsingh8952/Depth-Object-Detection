@@ -17,7 +17,7 @@ def detect_face(frame):
     face_encodings = face_recognition.face_encodings(rgb, face_locations)
 
     if not face_encodings:
-        return None
+        return None, None
 
     for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
         distances = face_recognition.face_distance(

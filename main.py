@@ -47,7 +47,9 @@ try:
                 break
         # ---------- FACE MODE ----------
         else:
-            frame, name = detect_face(frame)
+            nframe, name = detect_face(frame)
+            if nframe is not None:
+                frame = nframe
             if name != "Unknown" and name != old_name:
                 speak(f"{name} detected")
                 print(f"{name} detected")
