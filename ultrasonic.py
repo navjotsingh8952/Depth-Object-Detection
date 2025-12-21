@@ -15,7 +15,9 @@ class Ultrasonic:
 
 if __name__ == '__main__':
     ultra_left = Ultrasonic(trig=23, echo=24)
+    ultra_right = Ultrasonic(trig=27, echo=22)
 
     while True:
         left = ultra_left.distance_cm()
-        print(left)
+        right = ultra_right.distance_cm()
+        print("Left: ", left, "Right: ", right)
