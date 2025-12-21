@@ -28,12 +28,13 @@ try:
         if iteration % 10 == 0:
             left = ultra_left.distance_cm()
             right = ultra_right.distance_cm()
+            speak(f"Distance Left: {left}, Right: {right}")
+            print(f"Distance Left: {left}, Right: {right}")
         iteration += 1
         ret, frame = cap.read()
         if not ret:
             continue
-        speak(f"Distance Left: {left}, Right: {right}")
-        print(f"Distance Left: {left}, Right: {right}")
+
         # ---------- OBJECT MODE ----------
         if mode == "OBJECT":
             frame, objects = detect_object(frame)
