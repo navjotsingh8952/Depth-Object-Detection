@@ -28,8 +28,8 @@ try:
             print(f"{mode} mode activated")
             last_mode = mode
 
-        left = ultra_left.distance()
-        right = ultra_right.distance()
+        left = ultra_left.distance_cm()
+        right = ultra_right.distance_cm()
         ret, frame = cap.read()
         if not ret:
             continue
