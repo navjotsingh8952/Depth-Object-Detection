@@ -60,4 +60,4 @@ except KeyboardInterrupt:
 
 finally:
     cap.release()
-    GPIO.cleanup()
+    cv2.destroyAllWindows()
