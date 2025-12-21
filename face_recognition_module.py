@@ -12,7 +12,7 @@ last_time = 0
 
 
 def detect_face(frame):
-    rgb = frame[:, :, ::-1]
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     face_locations = face_recognition.face_locations(rgb)
     face_encodings = face_recognition.face_encodings(rgb, face_locations)
 
