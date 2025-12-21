@@ -12,4 +12,4 @@ def speak(text: str):
     _engine.runAndWait()
 
 if __name__ == '__main__':
-    speak("Face recognized. Navjot detected")
+    speak("Face recognized")
