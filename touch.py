@@ -1,7 +1,8 @@
-import RPi.GPIO as GPIO
+# touch.py
+from gpiozero import Button
 
-TOUCH_PIN = 17
-GPIO.setup(TOUCH_PIN, GPIO.IN)
+touch = Button(17)  # BCM pin
+
 
 def is_touched():
-    return GPIO.input(TOUCH_PIN) == 1
+    return touch.is_pressed
