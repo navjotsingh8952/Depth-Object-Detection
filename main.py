@@ -16,6 +16,7 @@ cap = cv2.VideoCapture(0)
 last_mode = None
 old_name = None
 left = right = 0
+iteration = 0
 try:
     while True:
         mode = "FACE" if is_touched() else "OBJECT"
@@ -24,9 +25,10 @@ try:
             speak(f"{mode} mode activated")
             print(f"{mode} mode activated")
             last_mode = mode
-
-        left = ultra_left.distance_cm()
-        right = ultra_right.distance_cm()
+        if iteration % 10 == 0:
+            left = ultra_left.distance_cm()
+            right = ultra_right.distance_cm()
+        iteration += 1
         ret, frame = cap.read()
         if not ret:
             continue
