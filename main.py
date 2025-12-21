@@ -4,30 +4,29 @@ import cv2
 
 from face_recognition_module import detect_face
 from object_detection_module import detect_object
-# from touch import is_touched
+from touch import is_touched
 from tts import speak
 from ultrasonic import Ultrasonic
 
 # ---------- SENSORS ----------
-# ultra_left = Ultrasonic(trig=23, echo=24)
-# ultra_right = Ultrasonic(trig=27, echo=22)
+ultra_left = Ultrasonic(trig=23, echo=24)
+ultra_right = Ultrasonic(trig=27, echo=22)
 cap = cv2.VideoCapture(0)
 
 last_mode = None
 old_name = None
-left = right=0
+left = right = 0
 try:
     while True:
-        mode = "FACE"
-        # mode = "FACE" if is_touched() else "OBJECT"
+        mode = "FACE" if is_touched() else "OBJECT"
 
         if mode != last_mode:
             speak(f"{mode} mode activated")
             print(f"{mode} mode activated")
             last_mode = mode
 
-        # left = ultra_left.distance_cm()
-        # right = ultra_right.distance_cm()
+        left = ultra_left.distance_cm()
+        right = ultra_right.distance_cm()
         ret, frame = cap.read()
         if not ret:
             continue
