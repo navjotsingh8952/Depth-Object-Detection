@@ -8,14 +8,13 @@ from object_detection_module import detect_object
 from tts import speak
 from ultrasonic import Ultrasonic
 
+cap = cv2.VideoCapture(0)
 GPIO.setmode(GPIO.BCM)
 from touch import is_touched
 
 # ---------- SENSORS ----------
 ultra_left = Ultrasonic(trig=23, echo=24)
 ultra_right = Ultrasonic(trig=27, echo=22)
-
-cap = cv2.VideoCapture(0)
 
 last_mode = None
 old_name = None
